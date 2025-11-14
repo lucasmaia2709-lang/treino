@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MuscleTracker - Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        /* Animação para o Modal */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-backdrop {
+            animation: fadeIn 0.2s ease-out;
+        }
+        .modal-content {
+            animation: slideIn 0.2s ease-out;
+        }
+        /* Remove setas do input number */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- DADOS (Mantidos conforme sua preferência) ---
+
+        const TREINOS = [
+            {
+                id: 'A',
+                titulo: 'Costas & Bíceps',
+                foco: 'Puxar (Pull)',
+                exercicios: [
+                    { id: 'a1', nome: 'Puxada Alta', series: '4', reps: '10-12', obs: 'Foco na largura.' },
+                    { id: 'a2', nome: 'Remada Curvada', series: '4', reps: '8-10', obs: 'Tronco firme.' },
+                    { id: 'a3', nome: 'Remada Baixa', series: '3', reps: '12', obs: 'Esmague as costas.' },
+                    { id: 'a4', nome: 'Pulldown', series: '3', reps: '15', obs: 'Foco no dorsal.' },
+                    { id: 'a5', nome: 'Rosca Direta', series: '4', reps: '8-12', obs: 'Sem roubar.' },
+                    { id: 'a6', nome: 'Rosca Alternada 45°', series: '3', reps: '10-12', obs: 'Alonga o bíceps.' },
+                    { id: 'a7', nome: 'Rosca Martelo', series: '3', reps: '12', obs: 'Braquial.' }
+                ]
+            },
+            {
+                id: 'B',
+                titulo: 'Perna & Ombro',
+                foco: 'Inferior & Ombros',
+                exercicios: [
+                    { id: 'b1', nome: 'Agachamento Livre', series: '4', reps: '8-10', obs: 'Essencial.' },
+                    { id: 'b2', nome: 'Leg Press 45°', series: '4', reps: '10-12', obs: 'Amplitude completa.' },
+                    { id: 'b3', nome: 'Cadeira Extensora', series: '3', reps: '15', obs: 'Pico de contração.' },
+                    { id: 'b4', nome: 'Mesa Flexora', series: '4', reps: '12', obs: 'Foco no posterior.' },
+                    { id: 'b5', nome: 'Panturrilha em Pé', series: '5', reps: '15-20', obs: 'Amplitude máxima.' },
+                    { id: 'b6', nome: 'Desenvolvimento Militar', series: '4', reps: '8-12', obs: 'Carga pesada.' },
+                    { id: 'b7', nome: 'Elevação Lateral', series: '4', reps: '12-15', obs: 'Foco na lateral.' },
+                    { id: 'b8', nome: 'Crucifixo Inverso', series: '3', reps: '15', obs: 'Posterior de ombro.' }
+                ]
+            },
+            {
+                id: 'C',
+                titulo: 'Peito & Tríceps',
+                foco: 'Empurrar (Push)',
+                exercicios: [
+                    { id: 'c1', nome: 'Supino Inclinado (Halteres)', series: '4', reps: '8-12', obs: 'Foco na parte superior.' },
+                    { id: 'c2', nome: 'Supino Reto (Barra)', series: '4', reps: '8-10', obs: 'Carga alta. Base de força.' },
+                    { id: 'c3', nome: 'Crucifixo no Cross', series: '3', reps: '12-15', obs: 'Foque em fechar os cotovelos.' },
+                    { id: 'c4', nome: 'Voador (Peck Deck)', series: '3', reps: 'Falha', obs: 'Isolamento final.' },
+                    { id: 'c5', nome: 'Tríceps Corda', series: '4', reps: '10-12', obs: 'Abra a corda no final.' },
+                    { id: 'c6', nome: 'Tríceps Testa', series: '3', reps: '10-12', obs: 'Cuidado com cotovelo.' },
+                    { id: 'c7', nome: 'Tríceps Banco', series: '3', reps: 'Falha', obs: 'Use o peso do corpo.' }
+                ]
+            },
+            {
+                id: 'REST',
+                titulo: 'Descanso',
+                foco: 'Recuperação',
+                exercicios: [
+                    { id: 'r1', nome: 'Dormir 8h+', series: '-', reps: '-', obs: 'Crescimento muscular.' },
+                    { id: 'r2', nome: 'Caminhada Leve', series: '1', reps: '30min', obs: 'Recuperação ativa.' },
+                    { id: 'r3', nome: 'Alongamento', series: '1', reps: '20min', obs: 'Mobilidade.' }
+                ]
+            }
+        ];
+
+        const DIETA_BASE = [
+            { id: 1, refeicao: 'Pré-Treino', alimentos: '1 Banana + 30g Aveia + Café', pro: 5, carbo: 30, status: false },
+            { id: 2, refeicao: 'Pós-Treino', alimentos: '4 Ovos + 2 Fatias Pão + Fruta', pro: 35, carbo: 45, status: false },
+            { id: 3, refeicao: 'Almoço', alimentos: '150g Frango + 200g Arroz + Salada', pro: 40, carbo: 60, status: false },
+            { id: 4, refeicao: 'Lanche', alimentos: 'Iogurte + Fruta', pro: 10, carbo: 20, status: false },
+            { id: 5, refeicao: 'Jantar', alimentos: '150g Carne + 100g Batata', pro: 35, carbo: 30, status: false },
+            { id: 6, refeicao: 'Ceia', alimentos: '2 Ovos Cozidos', pro: 12, carbo: 0, status: false },
+        ];
+
+        const LISTA_MERCADO_BASE = [
+            { categoria: 'Proteínas', items: [
+                { id: 'p1', nome: 'Ovos (Cartela 30uni)', qtd: '2 cartelas', check: false },
+                { id: 'p2', nome: 'Peito de Frango', qtd: '1.5 kg', check: false },
+                { id: 'p3', nome: 'Carne Moída/Bife', qtd: '1 kg', check: false },
+            ]},
+            { categoria: 'Carboidratos', items: [
+                { id: 'c1', nome: 'Arroz / Macarrão', qtd: '1 kg', check: false },
+                { id: 'c2', nome: 'Batata (Doce/Inglesa)', qtd: '1.5 kg', check: false },
+                { id: 'c3', nome: 'Aveia em Flocos', qtd: '2 caixas', check: false },
+                { id: 'c4', nome: 'Pão Integral', qtd: '1 pacote', check: false },
+            ]},
+            { categoria: 'Hortifruti', items: [
+                { id: 'h1', nome: 'Bananas', qtd: '2 dúzias', check: false },
+                { id: 'h2', nome: 'Maçã/Pera/Outras', qtd: '6-8 uni', check: false },
+                { id: 'h3', nome: 'Salada/Legumes', qtd: 'A vontade', check: false },
+            ]},
+            { categoria: 'Outros', items: [
+                { id: 'o1', nome: 'Iogurte Natural', qtd: '6 potes', check: false },
+                { id: 'o2', nome: 'Azeite de Oliva', qtd: '1 uni', check: false },
+                { id: 'o3', nome: 'Café', qtd: '1 pacote', check: false },
+            ]}
+        ];
+
+        // --- COMPONENTES ---
+
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const iconRef = useRef(null);
+            
+            useEffect(() => {
+                if(iconRef.current) {
+                    lucide.createIcons({
+                        root: iconRef.current,
+                        nameAttr: 'data-lucide',
+                        attrs: {
+                            width: size,
+                            height: size,
+                            class: className
+                        }
+                    });
+                }
+            }, [name, size, className]);
+
+            return <span ref={iconRef} className="inline-flex items-center justify-center"><i data-lucide={name}></i></span>;
+        };
+
+        const ProgressBar = ({ current, total, color = "bg-blue-500" }) => {
+            const percent = total === 0 ? 0 : Math.min(100, Math.max(0, (current / total) * 100));
+            return (
+                <div className="w-full bg-slate-700 rounded-full h-2.5 mb-1">
+                    <div className={`${color} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${percent}%` }}></div>
+                </div>
+            );
+        };
+
+        // --- NOVO COMPONENTE: MODAL DE TREINO ---
+        const TreinoModal = ({ exercicio, logData, onSave, onClose }) => {
+            const [sets, setSets] = useState([]);
+
+            useEffect(() => {
+                const numSeries = parseInt(exercicio.series) || 0;
+                const initialSets = Array(numSeries).fill(null).map((_, index) => ({
+                    peso: logData[index]?.peso || '',
+                    reps: logData[index]?.reps || ''
+                }));
+                setSets(initialSets);
+            }, [exercicio, logData]);
+
+            const handleSetChange = (index, field, value) => {
+                const newSets = [...sets];
+                newSets[index][field] = value;
+                setSets(newSets);
+            };
+
+            const handleSaveClick = () => {
+                // Filtra sets vazios antes de salvar
+                const setsParaSalvar = sets.filter(set => set.peso !== '' || set.reps !== '');
+                onSave(exercicio.id, setsParaSalvar);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-backdrop">
+                    <div className="bg-slate-800 rounded-xl w-full max-w-sm shadow-2xl modal-content border border-slate-700">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-700">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">{exercicio.nome}</h3>
+                                <span className="text-xs text-blue-400">{exercicio.series} x {exercicio.reps}</span>
+                            </div>
+                            <button onClick={onClose} className="text-slate-500 hover:text-white">
+                                <Icon name="x" size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+                            {sets.map((set, index) => (
+                                <div key={index} className="flex items-center gap-3">
+                                    <span className="text-sm font-bold text-slate-400 bg-slate-900 w-8 h-8 flex items-center justify-center rounded-full">{index + 1}</span>
+                                    <div className="flex-1">
+                                        <label className="text-[10px] text-slate-500 uppercase font-bold">Peso (kg)</label>
+                                        <input
+                                            type="number"
+                                            value={set.peso}
+                                            onChange={(e) => handleSetChange(index, 'peso', e.target.value)}
+                                            placeholder="--"
+                                            className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white placeholder:text-slate-500"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-[10px] text-slate-500 uppercase font-bold">Reps</label>
+                                        <input
+                                            type="number"
+                                            value={set.reps}
+                                            onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                                            placeholder="--"
+                                            className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white placeholder:text-slate-500"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="p-4 border-t border-slate-700">
+                            <button onClick={handleSaveClick} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold">
+                                Salvar Log
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('dashboard'); 
+            const [currentDayIndex, setCurrentDayIndex] = useState(0);
+            
+            // --- ESTADOS ATUALIZADOS ---
+            const [treinoLog, setTreinoLog] = useState({}); // Substitui treinoChecklist
+            const [pesoLog, setPesoLog] = useState([]); // Novo estado para peso corporal
+            const [pesoInput, setPesoInput] = useState(''); // Input do peso
+            const [modalExercicio, setModalExercicio] = useState(null); // Controla o modal
+            
+            const [dietaChecklist, setDietaChecklist] = useState(DIETA_BASE);
+            const [mercadoChecklist, setMercadoChecklist] = useState(LISTA_MERCADO_BASE);
+            const [stats, setStats] = useState({ streak: 0, treinosConcluidos: 0 });
+
+            const STORAGE_KEY = 'muscleTrackerProV1'; // Nova chave de storage
+
+            useEffect(() => {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    setCurrentDayIndex(parsed.currentDayIndex || 0);
+                    setTreinoLog(parsed.treinoLog || {});
+                    setPesoLog(parsed.pesoLog || []);
+                    setDietaChecklist(parsed.dietaChecklist || DIETA_BASE);
+                    setMercadoChecklist(parsed.mercadoChecklist || LISTA_MERCADO_BASE);
+                    setStats(parsed.stats || { streak: 0, treinosConcluidos: 0 });
+                }
+            }, []);
+
+            useEffect(() => {
+                const dataToSave = {
+                    currentDayIndex,
+                    treinoLog, // Salva o novo log
+                    pesoLog,   // Salva o log de peso
+                    dietaChecklist,
+                    mercadoChecklist,
+                    stats
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            }, [currentDayIndex, treinoLog, pesoLog, dietaChecklist, mercadoChecklist, stats]);
+
+            const currentTreino = TREINOS[currentDayIndex];
+
+            // --- FUNÇÕES ATUALIZADAS / NOVAS ---
+
+            const handleOpenTreinoModal = (exercicio) => {
+                if (exercicio.series === '-') return; // Não abre modal para descanso
+                setModalExercicio(exercicio);
+            };
+
+            const handleCloseTreinoModal = () => {
+                setModalExercicio(null);
+            };
+
+            const handleSaveTreinoLog = (exercicioId, setsData) => {
+                setTreinoLog(prev => ({
+                    ...prev,
+                    [exercicioId]: setsData
+                }));
+                setModalExercicio(null);
+            };
+
+            const handleSavePeso = () => {
+                const today = new Date().toISOString().split('T')[0];
+                const newPeso = parseFloat(pesoInput);
+                if (!newPeso || newPeso <= 0) {
+                    // Substituindo alert() por um log ou um modal futuro
+                    console.error("Por favor, insira um peso válido."); 
+                    // Em um app real, usaríamos um modal de aviso aqui
+                    return;
+                }
+
+                setPesoLog(prev => {
+                    const existingIndex = prev.findIndex(e => e.date === today);
+                    let newLog = [...prev];
+                    if (existingIndex > -1) {
+                        newLog[existingIndex] = { date: today, peso: newPeso };
+                    } else {
+                        newLog.push({ date: today, peso: newPeso });
+                    }
+                    newLog.sort((a, b) => new Date(a.date) - new Date(b.date)); // Garante a ordem
+                    return newLog;
+                });
+                setPesoInput(''); // Limpa o input
+            };
+
+            const toggleDietaItem = (id) => {
+                setDietaChecklist(prev => prev.map(item => item.id === id ? { ...item, status: !item.status } : item));
+            };
+
+            const toggleMercadoItem = (catIndex, itemId) => {
+                setMercadoChecklist(prev => {
+                    return prev.map((cat, idx) => {
+                        if(idx === catIndex) {
+                            return {
+                                ...cat,
+                                items: cat.items.map(item => item.id === itemId ? {...item, check: !item.check} : item)
+                            };
+                        }
+                        return cat;
+                    });
+                });
+            };
+
+            const resetMercado = () => {
+                // Substituindo confirm() por uma ação direta (ou modal futuro)
+                console.log("Limpando lista de mercado..."); // Idealmente, isso seria um modal de confirmação
+                setMercadoChecklist(LISTA_MERCADO_BASE);
+            }
+
+            const finalizarDia = () => {
+                // Substituindo confirm() por uma ação direta (ou modal futuro)
+                console.log("Finalizando o dia..."); // Idealmente, isso seria um modal de confirmação
+                setTreinoLog({}); // Limpa o log de treino do dia
+                setDietaChecklist(prev => prev.map(item => ({...item, status: false})));
+                setStats(prev => ({
+                    streak: prev.streak + 1,
+                    treinosConcluidos: prev.treinosConcluidos + (currentTreino.id !== 'REST' ? 1 : 0)
+                }));
+                setCurrentDayIndex(prev => (prev + 1) % TREINOS.length);
+                window.scrollTo(0,0);
+            };
+
+            // Calculos
+            const dietaProg = (() => {
+                const total = dietaChecklist.length;
+                const completed = dietaChecklist.filter(i => i.status).length;
+                return { completed, total, percent: (completed/total)*100 };
+            })();
+
+            const treinoProg = (() => {
+                const totalExercicios = currentTreino.exercicios.filter(ex => ex.series !== '-').length;
+                const completed = Object.keys(treinoLog).filter(key => treinoLog[key].length > 0).length;
+                return { completed, total: totalExercicios, percent: (totalExercicios > 0 ? (completed/totalExercicios)*100 : 0) };
+            })();
+
+            // UI RENDERERS
+
+            const renderDashboard = () => (
+                <div className="space-y-6 pb-20">
+                    <header className="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+                                <Icon name="activity" size={28} /> Dashboard
+                            </h1>
+                            <p className="text-slate-400 text-xs">Foco Total</p>
+                        </div>
+                        <div className="bg-slate-800 px-3 py-2 rounded-lg text-center border border-slate-700">
+                            <span className="block text-[10px] text-slate-400 uppercase">Streak</span>
+                            <span className="font-bold text-orange-400 text-lg flex items-center gap-1"><Icon name="flame" size={16}/> {stats.streak}</span>
+                        </div>
+                    </header>
+
+                    {/* Card Treino */}
+                    <div className="bg-slate-800 rounded-xl p-5 border-l-4 border-blue-500 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Treino Hoje</span>
+                                <h2 className="text-xl font-bold text-white mt-1">{currentTreino.titulo}</h2>
+                            </div>
+                            <Icon name="dumbbell" className="text-slate-500" />
+                        </div>
+                        <ProgressBar current={treinoProg.completed} total={treinoProg.total} color="bg-blue-500" />
+                        <button onClick={() => setActiveTab('treino')} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm font-bold text-white transition">
+                            Iniciar Treino
+                        </button>
+                    </div>
+
+                    {/* Card Dieta */}
+                    <div className="bg-slate-800 rounded-xl p-5 border-l-4 border-orange-500 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">Nutrição</span>
+                                <h2 className="text-xl font-bold text-white mt-1">Dieta Diária</h2>
+                            </div>
+                            <Icon name="utensils" className="text-slate-500" />
+                        </div>
+                        <ProgressBar current={dietaProg.completed} total={dietaProg.total} color="bg-orange-500" />
+                        <button onClick={() => setActiveTab('dieta')} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm font-bold text-white transition">
+                            Ver Dieta
+                        </button>
+                    </div>
+
+                    <button onClick={() => { if(confirm("Finalizar o dia e avançar treino?")) { finalizarDia(); } }} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-6">
+                        <Icon name="check-circle-2" /> Finalizar Dia
+                    </button>
+                </div>
+            );
+
+            const renderTreino = () => (
+                <div className="pb-24">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-blue-600 p-2 rounded-lg">
+                            <Icon name="dumbbell" className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">{currentTreino.titulo}</h2>
+                            <p className="text-xs text-blue-400">{currentTreino.foco}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {currentTreino.exercicios.map((ex) => {
+                            const hasLog = treinoLog[ex.id] && treinoLog[ex.id].length > 0;
+                            const isRest = ex.series === '-';
+                            return (
+                                <div key={ex.id} 
+                                    onClick={() => !isRest && handleOpenTreinoModal(ex)}
+                                    className={`p-4 rounded-xl border transition-all no-select
+                                        ${isRest ? 'bg-slate-800 border-slate-700' : 'cursor-pointer'}
+                                        ${hasLog 
+                                            ? 'bg-slate-800/50 border-slate-700 opacity-70' 
+                                            : 'bg-slate-800 border-slate-600 hover:border-blue-500'}`}
+                                >
+                                    <div className="flex gap-4">
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 transition-colors
+                                            ${hasLog ? 'bg-blue-500 border-blue-500' : 'border-slate-500'}`}>
+                                            <div className={hasLog ? '' : 'hidden'}>
+                                                <Icon name="check" size={14} className="text-white" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className={`font-bold text-lg ${hasLog ? 'text-slate-500 line-through' : 'text-white'}`}>{ex.nome}</h3>
+                                            <div className="flex gap-2 mt-2">
+                                                <span className="text-xs font-bold bg-blue-900/50 text-blue-300 px-2 py-1 rounded">{ex.series} x {ex.reps}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-2">{ex.obs}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+            
+            // --- NOVA ABA: PROGRESSO (PESO) ---
+            const renderProgresso = () => {
+                const logInvertido = [...pesoLog].reverse();
+
+                return (
+                    <div className="pb-24">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-purple-600 p-2 rounded-lg">
+                                <Icon name="scale" className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Peso Corporal</h2>
+                                <p className="text-xs text-purple-400">Acompanhe sua evolução</p>
+                            </div>
+                        </div>
+
+                        {/* Input de Peso */}
+                        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+                            <label className="text-xs font-bold text-slate-400 mb-2 block">Registrar peso de hoje (kg)</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    value={pesoInput}
+                                    onChange={(e) => setPesoInput(e.target.value)}
+                                    placeholder="Ex: 80.5"
+                                    className="flex-1 bg-slate-700 border border-slate-600 rounded p-3 text-white placeholder:text-slate-500"
+                                />
+                                <button onClick={() => {
+                                    const newPeso = parseFloat(pesoInput);
+                                    if (!newPeso || newPeso <= 0) {
+                                        console.error("Peso inválido"); // Substituindo alert()
+                                    } else {
+                                        handleSavePeso();
+                                    }
+                                }} className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg font-bold">
+                                    <Icon name="save" size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Histórico */}
+                        <h3 className="text-sm font-bold text-slate-300 mb-3">Histórico</h3>
+                        <div className="space-y-2">
+                            {logInvertido.length === 0 && (
+                                <p className="text-sm text-slate-500 text-center p-4">Nenhum registro de peso ainda.</p>
+                            )}
+                            {logInvertido.map((entry, index) => {
+                                let variacao = null;
+                                if (index < logInvertido.length - 1) {
+                                    const anterior = logInvertido[index + 1];
+                                    const diff = (entry.peso - anterior.peso).toFixed(1);
+                                    if (diff > 0) {
+                                        variacao = <span className="text-emerald-400 text-xs">+{diff} kg</span>;
+                                    } else if (diff < 0) {
+                                        variacao = <span className="text-red-400 text-xs">{diff} kg</span>;
+                                    } else {
+                                        variacao = <span className="text-slate-500 text-xs">--</span>;
+                                    }
+                                }
+                                const dataFormatada = new Date(entry.date + 'T00:00:00-03:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                                return (
+                                    <div key={entry.date} className="bg-slate-800/50 rounded-lg p-3 flex justify-between items-center border border-slate-700">
+                                        <div>
+                                            <span className="text-sm text-slate-400">{dataFormatada}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {variacao}
+                                            <span className="text-lg font-bold text-white w-20 text-right">{entry.peso.toFixed(1)} kg</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderDieta = () => (
+                <div className="pb-24">
+                     <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-orange-600 p-2 rounded-lg">
+                            <Icon name="apple" className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Dieta</h2>
+                            <p className="text-xs text-orange-400">Objetivo: Ganho de Massa</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {dietaChecklist.map((ref) => (
+                            <div key={ref.id} 
+                                onClick={() => toggleDietaItem(ref.id)}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer select-none no-select
+                                    ${ref.status ? 'bg-slate-800/50 border-slate-700 opacity-70' : 'bg-slate-800 border-slate-600 hover:border-orange-500'}`}
+                            >
+                                <div className="flex gap-4">
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 transition-colors
+                                        ${ref.status ? 'bg-orange-500 border-orange-500' : 'border-slate-500'}`}>
+                                        <div className={ref.status ? '' : 'hidden'}>
+                                            <Icon name="check" size={14} className="text-white" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className={`font-bold ${ref.status ? 'text-slate-500 line-through' : 'text-white'}`}>{ref.refeicao}</h3>
+                                        <p className="text-sm text-slate-300 mt-1">{ref.alimentos}</p>
+                                        <div className="flex gap-3 mt-2 text-[10px] uppercase font-bold text-slate-500">
+                                            <span>PRO: {ref.pro}g</span>
+                                            <span>CARB: {ref.carbo}g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            const renderMercado = () => (
+                <div className="pb-24">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-emerald-600 p-2 rounded-lg">
+                                <Icon name="shopping-cart" className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Lista Semanal</h2>
+                            </div>
+                        </div>
+                        <button onClick={() => { if(confirm("Limpar lista de mercado?")) { resetMercado(); } }} className="text-xs text-slate-500 hover:text-white p-2">
+                            <Icon name="rotate-ccw" size={18}/>
+                        </button>
+                    </div>
+
+                    <div className="space-y-6">
+                        {mercadoChecklist.map((categoria, catIndex) => (
+                            <div key={catIndex} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                                <h3 className="text-emerald-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    {categoria.categoria}
+                                </h3>
+                                <div className="space-y-2">
+                                    {categoria.items.map((item) => (
+                                        <div 
+                                            key={item.id}
+                                            onClick={() => toggleMercadoItem(catIndex, item.id)}
+                                            className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all no-select ${item.check ? 'bg-emerald-900/20 opacity-50' : 'hover:bg-slate-700'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${item.check ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500'}`}>
+                                                    <div className={item.check ? '' : 'hidden'}>
+                                                        <Icon name="check" size={12} className="text-white" />
+                                                    </div>
+                                                </div>
+                                                <span className={`text-sm font-medium ${item.check ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                                    {item.nome}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-slate-400 bg-slate-900 px-2 py-1 rounded">
+                                                {item.qtd}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+
+            return (
+                <div className="max-w-md mx-auto bg-slate-900 min-h-screen relative shadow-2xl text-slate-100">
+                    
+                    {/* Renderiza o Modal se um exercício estiver selecionado */}
+                    {modalExercicio && (
+                        <TreinoModal 
+                            exercicio={modalExercicio}
+                            logData={treinoLog[modalExercicio.id] || []}
+                            onSave={handleSaveTreinoLog}
+                            onClose={handleCloseTreinoModal}
+                        />
+                    )}
+
+                    <main className="p-5 pt-6 min-h-screen">
+                        {activeTab === 'dashboard' && renderDashboard()}
+                        {activeTab === 'treino' && renderTreino()}
+                        {activeTab === 'progresso' && renderProgresso()} {/* <-- CORREÇÃO AQUI */}
+                        {activeTab === 'dieta' && renderDieta()}
+                        {activeTab === 'mercado' && renderMercado()}
+                    </main>
+
+                    {/* Menu Inferior Atualizado */}
+                    <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2 max-w-md mx-auto z-40 pb-safe">
+                        <div className="flex justify-around items-center">
+                            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center p-2 rounded-lg transition ${activeTab === 'dashboard' ? 'text-blue-400' : 'text-slate-500'}`}>
+                                <Icon name="home" size={24} />
+                                <span className="text-[10px] mt-1">Início</span>
+                            </button>
+                            <button onClick={() => setActiveTab('treino')} className={`flex flex-col items-center p-2 rounded-lg transition ${activeTab === 'treino' ? 'text-blue-400' : 'text-slate-500'}`}>
+                                <Icon name="dumbbell" size={24} />
+                                <span className="text-[10px] mt-1">Treino</span>
+                            </button>
+                            <button onClick={() => setActiveTab('progresso')} className={`flex flex-col items-center p-2 rounded-lg transition ${activeTab === 'progresso' ? 'text-purple-400' : 'text-slate-500'}`}>
+                                <Icon name="scale" size={24} />
+                                <span className="text-[10px] mt-1">Progresso</span>
+                            </button>
+                            <button onClick={() => setActiveTab('dieta')} className={`flex flex-col items-center p-2 rounded-lg transition ${activeTab === 'dieta' ? 'text-orange-400' : 'text-slate-500'}`}>
+                                <Icon name="apple" size={24} />
+                                <span className="text-[10px] mt-1">Dieta</span>
+                            </button>
+                            <button onClick={() => setActiveTab('mercado')} className={`flex flex-col items-center p-2 rounded-lg transition ${activeTab === 'mercado' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                <Icon name="shopping-cart" size={24} />
+                                <span className="text-[10px] mt-1">Mercado</span>
+                            </button>
+                        </div>
+                    </nav>
+                </div>
+            );
+        }
+
+        // --- Alertas e Confirmações ---
+        // Substituindo funções globais para evitar bloqueio no iframe
+        // Em um app real, isso seria um componente de Modal customizado.
+        const originalAlert = window.alert;
+        window.alert = (message) => {
+            console.warn("ALERTA:", message);
+            // Poderia mostrar um toast ou modal aqui
+        };
+
+        const originalConfirm = window.confirm;
+        window.confirm = (message) => {
+            console.warn("CONFIRMAÇÃO:", message);
+            // Para testes, vamos assumir que o usuário sempre confirma
+            // Em um app real, isso abriria um modal de Sim/Não
+            return true; 
+        };
+
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
