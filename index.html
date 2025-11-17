@@ -76,6 +76,20 @@
 
         const TREINOS = [
             {
+                id: 'C',
+                titulo: 'Peito & Tríceps',
+                foco: 'Empurrar (Push)',
+                exercicios: [
+                    { id: 'c1', nome: 'Supino Inclinado (Halteres)', series: '4', reps: '8-12', obs: 'Foco na parte superior.' },
+                    { id: 'c2', nome: 'Supino Reto (Barra)', series: '4', reps: '8-10', obs: 'Carga alta. Base de força.' },
+                    { id: 'c3', nome: 'Crucifixo no Cross', series: '3', reps: '12-15', obs: 'Foque em fechar os cotovelos.' },
+                    { id: 'c4', nome: 'Voador (Peck Deck)', series: '3', reps: 'Falha', obs: 'Isolamento final.' },
+                    { id: 'c5', nome: 'Tríceps Corda', series: '4', reps: '10-12', obs: 'Abra a corda no final.' },
+                    { id: 'c6', nome: 'Tríceps Testa', series: '3', reps: '10-12', obs: 'Cuidado com cotovelo.' },
+                    { id: 'c7', nome: 'Tríceps Banco', series: '3', reps: 'Falha', obs: 'Use o peso do corpo.' }
+                ]
+            },
+            {
                 id: 'A',
                 titulo: 'Costas & Bíceps',
                 foco: 'Puxar (Pull)',
@@ -102,20 +116,6 @@
                     { id: 'b6', nome: 'Desenvolvimento Militar', series: '4', reps: '8-12', obs: 'Carga pesada.' },
                     { id: 'b7', nome: 'Elevação Lateral', series: '4', reps: '12-15', obs: 'Foco na lateral.' },
                     { id: 'b8', nome: 'Crucifixo Inverso', series: '3', reps: '15', obs: 'Posterior de ombro.' }
-                ]
-            },
-            {
-                id: 'C',
-                titulo: 'Peito & Tríceps',
-                foco: 'Empurrar (Push)',
-                exercicios: [
-                    { id: 'c1', nome: 'Supino Inclinado (Halteres)', series: '4', reps: '8-12', obs: 'Foco na parte superior.' },
-                    { id: 'c2', nome: 'Supino Reto (Barra)', series: '4', reps: '8-10', obs: 'Carga alta. Base de força.' },
-                    { id: 'c3', nome: 'Crucifixo no Cross', series: '3', reps: '12-15', obs: 'Foque em fechar os cotovelos.' },
-                    { id: 'c4', nome: 'Voador (Peck Deck)', series: '3', reps: 'Falha', obs: 'Isolamento final.' },
-                    { id: 'c5', nome: 'Tríceps Corda', series: '4', reps: '10-12', obs: 'Abra a corda no final.' },
-                    { id: 'c6', nome: 'Tríceps Testa', series: '3', reps: '10-12', obs: 'Cuidado com cotovelo.' },
-                    { id: 'c7', nome: 'Tríceps Banco', series: '3', reps: 'Falha', obs: 'Use o peso do corpo.' }
                 ]
             },
             {
@@ -194,7 +194,7 @@
             );
         };
 
-        // --- NOVO COMPONENTE: MODAL DE TREINO ---
+        // --- COMPONENTE: MODAL DE TREINO ---
         const TreinoModal = ({ exercicio, logData, onSave, onClose }) => {
             const [sets, setSets] = useState([]);
 
@@ -270,6 +270,97 @@
             );
         };
 
+        // --- NOVO COMPONENTE: MODAL DE ANÁLISE DE DIETA ---
+        const AnaliseDietaModal = ({ isOpen, onClose, refeicao, isLoading, onAnalise, inputValue, onInputChange, resultado }) => {
+            if (!isOpen) return null;
+
+            const formatApiResponse = (text) => {
+                if (!text) return "";
+                // Formatação simples de Markdown (Negrito e quebra de linha)
+                return text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')     // Itálico
+                    .replace(/(\n)/g, '<br />');               // Novas linhas
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-backdrop">
+                    <div className="bg-slate-800 rounded-xl w-full max-w-sm shadow-2xl modal-content border border-slate-700">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-700">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Analisar Refeição</h3>
+                                <span className="text-xs text-sky-400">Substituir: {refeicao?.refeicao}</span>
+                            </div>
+                            <button onClick={onClose} className="text-slate-500 hover:text-white">
+                                <Icon name="x" size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+                            {!resultado && !isLoading && (
+                                <>
+                                    <label className="text-sm text-slate-300 mb-2 block">
+                                        Digite a opção que você quer comer:
+                                    </label>
+                                    <textarea
+                                        value={inputValue}
+                                        onChange={(e) => onInputChange(e.target.value)}
+                                        placeholder="Ex: 3 fatias de pizza de frango"
+                                        className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white placeholder:text-slate-500 h-24"
+                                    />
+                                </>
+                            )}
+                            
+                            {isLoading && (
+                                <div className="flex flex-col items-center justify-center h-24">
+                                    <Icon name="loader-2" className="animate-spin text-sky-400" />
+                                    <span className="text-sm text-slate-400 mt-2">Analisando...</span>
+                                </div>
+                            )}
+
+                            {resultado && (
+                                <div className="text-sm text-slate-200 p-2 bg-slate-900/50 rounded-lg">
+                                    <p dangerouslySetInnerHTML={{ __html: formatApiResponse(resultado) }} />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-slate-700">
+                            {!resultado && !isLoading && (
+                                <button 
+                                    onClick={onAnalise} 
+                                    disabled={isLoading || !inputValue}
+                                    className="w-full bg-sky-600 hover:bg-sky-700 text-white p-3 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <Icon name="brain" size={18} />
+                                    Analisar com IA
+                                </button>
+                            )}
+                            {(resultado || isLoading) && (
+                                <button onClick={onClose} className="w-full bg-slate-600 hover:bg-slate-700 text-white p-3 rounded-lg font-bold">
+                                    Fechar
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        // --- HELPER DE FETCH COM RETRY ---
+        const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+            try {
+                return await fetch(url, options);
+            } catch (err) {
+                if (retries > 0) {
+                    // Não loga retentativas no console
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                }
+                throw err;
+            }
+        };
+
 
         function App() {
             const [activeTab, setActiveTab] = useState('dashboard'); 
@@ -281,6 +372,13 @@
             const [pesoInput, setPesoInput] = useState(''); // Input do peso
             const [modalExercicio, setModalExercicio] = useState(null); // Controla o modal
             
+            // --- NOVOS ESTADOS PARA ANÁLISE DE DIETA ---
+            const [isAnaliseModalOpen, setIsAnaliseModalOpen] = useState(false);
+            const [refeicaoParaAnalise, setRefeicaoParaAnalise] = useState(null);
+            const [analiseInput, setAnaliseInput] = useState('');
+            const [analiseLoading, setAnaliseLoading] = useState(false);
+            const [analiseResultado, setAnaliseResultado] = useState(null);
+
             const [dietaChecklist, setDietaChecklist] = useState(DIETA_BASE);
             const [mercadoChecklist, setMercadoChecklist] = useState(LISTA_MERCADO_BASE);
             const [stats, setStats] = useState({ streak: 0, treinosConcluidos: 0 });
@@ -333,6 +431,90 @@
                 setModalExercicio(null);
             };
 
+            // --- NOVAS FUNÇÕES - ANÁLISE DE DIETA ---
+            const handleOpenAnaliseModal = (refeicao) => {
+                setRefeicaoParaAnalise(refeicao);
+                setIsAnaliseModalOpen(true);
+                setAnaliseInput('');
+                setAnaliseResultado(null);
+                setAnaliseLoading(false);
+            };
+
+            const handleCloseAnaliseModal = () => {
+                setIsAnaliseModalOpen(false);
+            };
+
+            const handleAnaliseDieta = async () => {
+                if (!analiseInput || !refeicaoParaAnalise) return;
+                
+                setAnaliseLoading(true);
+                setAnaliseResultado(null);
+
+                // *** SUA CHAVE DE API FOI INSERIDA AQUI ***
+                const apiKey = "AIzaSyBo90fWoREhClB8W3fuI4mD8_eEDrPYrKo"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const systemPrompt = `Você é um nutricionista esportivo focado em hipertrofia (ganho de massa muscular). O usuário está seguindo uma dieta e quer substituir uma refeição.
+
+Responda em Português do Brasil, usando Markdown, de forma concisa e amigável.
+
+Seja direto: Comece com "Sim" ou "Não" sobre a adequação da troca.
+
+Sempre cubra os 3 pontos:
+1.  **Adequação:** A troca é boa ou ruim para o objetivo de hipertrofia?
+2.  **Quantidade Sugerida:** Qual a quantidade aproximada que ele deve comer da nova opção?
+3.  **Ajustes no Dia:** Ele precisa mudar algo nas próximas refeições (ex: "diminua o arroz no jantar")?`;
+
+                const dietaAtualCompleta = DIETA_BASE.map(r => `- ${r.refeicao}: ${r.alimentos}`).join('\n');
+                const refeicaoOriginal = refeicaoParaAnalise;
+
+                const userQuery = `Estou em uma dieta para hipertrofia. Minha dieta do dia é:
+${dietaAtualCompleta}
+
+Quero substituir meu "${refeicaoOriginal.refeicao}" (que originalmente é: ${refeicaoOriginal.alimentos} - PRO: ${refeicaoOriginal.pro}g, CARBO: ${refeicaoOriginal.carbo}g) pela seguinte opção: "${analiseInput}".
+
+Por favor, analise esta troca seguindo as regras (Adequação, Quantidade, Ajustes).`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                try {
+                    const response = await fetchWithRetry(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Erro da API:", errorData);
+                        throw new Error(`Erro na API: ${response.statusText}. Detalhes: ${JSON.stringify(errorData)}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (text) {
+                        setAnaliseResultado(text);
+                    } else {
+                        console.error("Resposta inesperada da API:", result);
+                        setAnaliseResultado("Não foi possível obter uma análise. A resposta da API estava vazia ou em formato incorreto.");
+                    }
+
+                } catch (error) {
+                    console.error("Erro ao chamar a API Gemini:", error);
+                    setAnaliseResultado(`Ocorreu um erro de conexão ou configuração. Verifique seu console (F12) para detalhes. Erro: ${error.message}`);
+                } finally {
+                    setAnaliseLoading(false);
+                }
+            };
+            // --- FIM DAS NOVAS FUNÇÕES ---
+
+
             const handleSavePeso = () => {
                 const today = new Date().toISOString().split('T')[0];
                 const newPeso = parseFloat(pesoInput);
@@ -376,14 +558,14 @@
             };
 
             const resetMercado = () => {
-                // Substituindo confirm() por uma ação direta (ou modal futuro)
-                console.log("Limpando lista de mercado..."); // Idealmente, isso seria um modal de confirmação
+                // Substituindo confirm() por uma ação direta
+                console.log("Limpando lista de mercado...");
                 setMercadoChecklist(LISTA_MERCADO_BASE);
             }
 
             const finalizarDia = () => {
-                // Substituindo confirm() por uma ação direta (ou modal futuro)
-                console.log("Finalizando o dia..."); // Idealmente, isso seria um modal de confirmação
+                // Substituindo confirm() por uma ação direta
+                console.log("Finalizando o dia...");
                 setTreinoLog({}); // Limpa o log de treino do dia
                 setDietaChecklist(prev => prev.map(item => ({...item, status: false})));
                 setStats(prev => ({
@@ -454,7 +636,7 @@
                         </button>
                     </div>
 
-                    <button onClick={() => { if(confirm("Finalizar o dia e avançar treino?")) { finalizarDia(); } }} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-6">
+                    <button onClick={finalizarDia} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-6">
                         <Icon name="check-circle-2" /> Finalizar Dia
                     </button>
                 </div>
@@ -513,7 +695,7 @@
 
                 return (
                     <div className="pb-24">
-                        <div className="flex items-center gap-3 mb-6">
+                         <div className="flex items-center gap-3 mb-6">
                             <div className="bg-purple-600 p-2 rounded-lg">
                                 <Icon name="scale" className="text-white" />
                             </div>
@@ -619,6 +801,20 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                {/* --- NOVO BOTÃO DE ANÁLISE --- */}
+                                {(ref.refeicao === 'Almoço' || ref.refeicao === 'Jantar') && (
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Impede que o clique marque/desmarque a refeição
+                                            handleOpenAnaliseModal(ref);
+                                        }}
+                                        className="mt-3 w-full text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all"
+                                    >
+                                        <Icon name="brain" size={14} />
+                                        Analisar Opção
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -636,7 +832,7 @@
                                 <h2 className="text-xl font-bold text-white">Lista Semanal</h2>
                             </div>
                         </div>
-                        <button onClick={() => { if(confirm("Limpar lista de mercado?")) { resetMercado(); } }} className="text-xs text-slate-500 hover:text-white p-2">
+                        <button onClick={resetMercado} className="text-xs text-slate-500 hover:text-white p-2">
                             <Icon name="rotate-ccw" size={18}/>
                         </button>
                     </div>
@@ -690,10 +886,25 @@
                         />
                     )}
 
+                    {/* --- NOVO: RENDERIZA O MODAL DE ANÁLISE --- */}
+                    {isAnaliseModalOpen && (
+                        <AnaliseDietaModal
+                            isOpen={isAnaliseModalOpen}
+                            onClose={handleCloseAnaliseModal}
+                            refeicao={refeicaoParaAnalise}
+                            isLoading={analiseLoading}
+                            onAnalise={handleAnaliseDieta}
+                            inputValue={analiseInput}
+                            onInputChange={setAnaliseInput}
+                            resultado={analiseResultado}
+                        />
+                    )}
+
+
                     <main className="p-5 pt-6 min-h-screen">
                         {activeTab === 'dashboard' && renderDashboard()}
                         {activeTab === 'treino' && renderTreino()}
-                        {activeTab === 'progresso' && renderProgresso()} {/* <-- CORREÇÃO AQUI */}
+                        {activeTab === 'progresso' && renderProgresso()}
                         {activeTab === 'dieta' && renderDieta()}
                         {activeTab === 'mercado' && renderMercado()}
                     </main>
@@ -739,9 +950,14 @@
         const originalConfirm = window.confirm;
         window.confirm = (message) => {
             console.warn("CONFIRMAÇÃO:", message);
-            // Para testes, vamos assumir que o usuário sempre confirma
-            // Em um app real, isso abriria um modal de Sim/Não
-            return true; 
+            // Para DEV, vamos desativar confirmações para "Finalizar Dia" e "Resetar Mercado"
+            // Se a mensagem for sobre finalizar o dia ou resetar, retorna true automaticamente.
+            if (message.includes("Finalizar o dia") || message.includes("Limpar lista")) {
+                return true;
+            }
+            
+            // Para outras confirmações (se houver), podemos decidir um padrão
+            return true; // Padrão para confirmar
         };
 
 
