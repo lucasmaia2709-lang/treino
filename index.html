@@ -320,7 +320,12 @@
 
                             {resultado && (
                                 <div className="text-sm text-slate-200 p-2 bg-slate-900/50 rounded-lg">
-                                    <p dangerouslySetInnerHTML={{ __html: formatApiResponse(resultado) }} />
+                                    {/* Usamos 'dangerouslySetInnerHTML' para formatar o HTML, mas também uma versão 'pre' para texto puro em caso de erro */}
+                                    {resultado.startsWith("<strong>") ? (
+                                        <p dangerouslySetInnerHTML={{ __html: formatApiResponse(resultado) }} />
+                                    ) : (
+                                        <pre className="whitespace-pre-wrap font-sans">{resultado}</pre>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -450,9 +455,13 @@
                 setAnaliseLoading(true);
                 setAnaliseResultado(null);
 
-                // *** SUA CHAVE DE API FOI INSERIDA AQUI ***
-                const apiKey = "AIzaSyBo90fWoREhClB8W3fuI4mD8_eEDrPYrKo"; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                // *** MUDANÇA PRINCIPAL AQUI ***
+                // 1. A chave de API foi REMOVIDA daqui.
+                // 2. A URL agora aponta para o SEU backend (Cloudflare Worker).
+                
+                // COLOQUE A URL DO SEU WORKER DEPLOYADO AQUI
+                const apiUrl = "https://plain-lab-ebeb.lucasabreucotefis.workers.dev"; 
+                // Ex: "https://analise-dieta-proxy.meu-nome.workers.dev"
 
                 const systemPrompt = `Você é um nutricionista esportivo focado em hipertrofia (ganho de massa muscular). O usuário está seguindo uma dieta e quer substituir uma refeição.
 
@@ -483,18 +492,26 @@ Por favor, analise esta troca seguindo as regras (Adequação, Quantidade, Ajust
                 };
 
                 try {
+                    // A chamada agora é feita para o SEU worker, enviando o payload.
+                    // O worker vai adicionar a chave secreta e chamar o Google.
                     const response = await fetchWithRetry(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
+                    // *** CORREÇÃO DO ERRO DE JSON ***
+                    // Verifica se a resposta NÃO foi OK e tenta ler como TEXTO.
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        console.error("Erro da API:", errorData);
-                        throw new Error(`Erro na API: ${response.statusText}. Detalhes: ${JSON.stringify(errorData)}`);
+                        const errorText = await response.text(); // Lê como texto puro
+                        console.error("Erro da API (via Worker):", errorText);
+                        
+                        // Exibe a mensagem de erro vinda do backend (ex: "Chave de API não configurada...")
+                        setAnaliseResultado(`Erro no Servidor: ${errorText}`);
+                        throw new Error(`Erro na API (via Worker): ${errorText}`);
                     }
 
+                    // Se a resposta foi OK, processa como JSON.
                     const result = await response.json();
                     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                     
@@ -507,7 +524,10 @@ Por favor, analise esta troca seguindo as regras (Adequação, Quantidade, Ajust
 
                 } catch (error) {
                     console.error("Erro ao chamar a API Gemini:", error);
-                    setAnaliseResultado(`Ocorreu um erro de conexão ou configuração. Verifique seu console (F12) para detalhes. Erro: ${error.message}`);
+                    // Se o resultado ainda não foi setado, seta a mensagem de erro
+                    if (!analiseResultado) {
+                         setAnaliseResultado(`Ocorreu um erro de conexão ou configuração. Verifique seu console (F12) para detalhes. Erro: ${error.message}`);
+                    }
                 } finally {
                     setAnaliseLoading(false);
                 }
